@@ -1,0 +1,63 @@
+import java.io.File
+
+var peoples = mutableSetOf<Person>()
+var invertedIndex: MutableMap<String, MutableSet<Person>> = mutableMapOf()
+
+fun main(args: Array<String>) {
+    File(args[args.indexOf("--data")+1]).forEachLine { s ->
+        val input = s.toLowerCase().split(" ").toMutableList()
+        peoples.add(Person(input[0], input[1], input.getOrNull(2)))
+        input.forEach {
+            if (invertedIndex.containsKey(it)) invertedIndex[it]!!.add(peoples.last())
+            else { invertedIndex[it] = mutableSetOf(peoples.last()) }
+        }
+    }
+
+    while (true) {
+        println("\n=== Menu ===\n1. Find a person\n2. Print all people\n0. Exit")
+        try { when (readLine()!!.toInt()) {
+            1 -> {
+                println("\nSelect a matching strategy: ALL, ANY, NONE")
+                readLine()!!.let { type ->
+                    println("\nEnter a name or email to search all suitable people.")
+                    search(readLine()!!.toLowerCase().split(" "), type)
+                }
+            }
+            2 -> { println("\n=== List of people ==="); peoples.forEach { println(it) } }
+            0 -> { println("\nBye!"); return }
+            else -> println("Incorrect option! Try again.")
+        } } catch (e:Exception) { println("Incorrect option! Try again.") }
+    }
+}
+
+fun search(query: List<String>, type: String) {
+    var x = mutableSetOf<Person>()
+    when (type) {
+        "ALL" -> {
+            query.forEachIndexed { i, s ->
+                when {
+                    i == 0 -> if (invertedIndex.containsKey(s)) x = invertedIndex[s]!!
+                    invertedIndex.containsKey(s) -> x = x.intersect(invertedIndex[s]!!).toMutableSet()
+                    else -> x.clear()
+                }
+            }
+        }
+        "ANY" -> { query.forEach { if (invertedIndex.containsKey(it)) { x = x.union(invertedIndex[it]!!).toMutableSet() }}}
+        "NONE" -> {
+            x = peoples
+            query.forEach{ if (invertedIndex.containsKey(it)) x = x.subtract(invertedIndex[it]!!).toMutableSet() }
+        }
+        else -> println("Incorrect option! Try again.")
+    }
+    if (x.isEmpty()) { println("No matching people found.")
+    } else {
+        println("${x.count()} persons found:")
+        x.forEach { println(it) }
+    }
+}
+data class Person(val name: String, val surname: String, var email: String? = null) {
+    override fun toString(): String {
+        return if (email != null) "${name.capitalize()} ${surname.capitalize()} $email"
+            else "${name.capitalize()} ${surname.capitalize()}"
+    }
+}
